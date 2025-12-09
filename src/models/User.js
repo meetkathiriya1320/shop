@@ -52,7 +52,7 @@ class User {
         try {
             const hashedPassword = await bcrypt.hash(password, 8);
             const [result] = await pool.execute(
-                'INSERT INTO users (name, email, password, role, address_street, address_city, address_state, address_zip, address_country, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+                'INSERT INTO users (name, email, password, role, address_street, address_city, address_state, address_zip, address_country, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
                 [name, email, hashedPassword, role, addressStreet, addressCity, addressState, addressZip, addressCountry]
             );
             return result.insertId;
@@ -67,7 +67,7 @@ class User {
         try {
             const createTableQuery = `
                 CREATE TABLE IF NOT EXISTS users (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name VARCHAR(255) NOT NULL,
                     email VARCHAR(255) UNIQUE NOT NULL,
                     password VARCHAR(255) NOT NULL,
@@ -84,7 +84,7 @@ class User {
 
             // Add role column if it doesn't exist (for existing tables)
             try {
-                await pool.execute('ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT \'user\'');
+                await pool.execute('ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT \'user\'');
             } catch (alterError) {
                 // Column might already exist, ignore error
                 console.log('Role column check completed.');
@@ -92,11 +92,11 @@ class User {
 
             // Add address columns if they don't exist (for existing tables)
             try {
-                await pool.execute('ALTER TABLE users ADD COLUMN IF NOT EXISTS address_street VARCHAR(255)');
-                await pool.execute('ALTER TABLE users ADD COLUMN IF NOT EXISTS address_city VARCHAR(100)');
-                await pool.execute('ALTER TABLE users ADD COLUMN IF NOT EXISTS address_state VARCHAR(100)');
-                await pool.execute('ALTER TABLE users ADD COLUMN IF NOT EXISTS address_zip VARCHAR(20)');
-                await pool.execute('ALTER TABLE users ADD COLUMN IF NOT EXISTS address_country VARCHAR(100)');
+                await pool.execute('ALTER TABLE users ADD COLUMN address_street VARCHAR(255)');
+                await pool.execute('ALTER TABLE users ADD COLUMN address_city VARCHAR(100)');
+                await pool.execute('ALTER TABLE users ADD COLUMN address_state VARCHAR(100)');
+                await pool.execute('ALTER TABLE users ADD COLUMN address_zip VARCHAR(20)');
+                await pool.execute('ALTER TABLE users ADD COLUMN address_country VARCHAR(100)');
             } catch (alterError) {
                 // Columns might already exist, ignore error
                 console.log('Address columns check completed.');
@@ -111,7 +111,9 @@ class User {
 }
 
 // Automatically create the table upon model import (migration)
-User.createTableIfNotExists();
+User.createTableIfNotExists().catch(err => {
+    console.error('Failed to create users table:', err);
+});
 
 // Add a sample user if it doesn't exist
 User.addSampleUserIfNotExists = async () => {
@@ -136,7 +138,7 @@ User.addSampleUserIfNotExists = async () => {
             console.log('Sample admin user added to the database.');
         } catch (createError) {
             // If creation fails due to duplicate entry, it's probably already created by another process
-            if (createError.code === 'ER_DUP_ENTRY') {
+            if (createError.code === 'ER_DUP_ENTRY' || createError.code === 'SQLITE_CONSTRAINT') {
                 console.log('Sample admin user already exists (created by another process).');
             } else {
                 throw createError;
@@ -147,6 +149,8 @@ User.addSampleUserIfNotExists = async () => {
     }
 };
 
-User.addSampleUserIfNotExists();
+User.addSampleUserIfNotExists().catch(err => {
+    console.error('Failed to add sample user:', err);
+});
 
 export default User;

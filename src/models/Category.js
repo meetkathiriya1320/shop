@@ -35,7 +35,7 @@ class Category {
     static async create(name, price, size, material, color, description, images) {
         try {
             const [result] = await pool.execute(
-                'INSERT INTO categories (name, price, size, material, color, description, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+                'INSERT INTO categories (name, price, size, material, color, description, created_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
                 [name, price, size, material, color, description]
             );
             const categoryId = result.insertId;
@@ -100,9 +100,9 @@ class Category {
         try {
             const createTableQuery = `
                 CREATE TABLE IF NOT EXISTS categories (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name VARCHAR(255) NOT NULL,
-                    price DECIMAL(10,2) NOT NULL,
+                    price REAL NOT NULL,
                     size VARCHAR(50),
                     material VARCHAR(100),
                     color VARCHAR(50),
@@ -115,17 +115,21 @@ class Category {
             // Create category_images table for multiple images
             const createImagesTableQuery = `
                 CREATE TABLE IF NOT EXISTS category_images (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    category_id INT NOT NULL,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    category_id INTEGER NOT NULL,
                     image_url VARCHAR(500) NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             `;
             await pool.execute(createImagesTableQuery);
 
             // Ensure description column exists (for backward compatibility)
-            await pool.execute('ALTER TABLE categories ADD COLUMN IF NOT EXISTS description TEXT');
+            try {
+                await pool.execute('ALTER TABLE categories ADD COLUMN description TEXT');
+            } catch (alterError) {
+                // Column might already exist, ignore error
+                console.log('Description column check completed.');
+            }
 
             console.log('Categories and category_images tables created or updated.');
         } catch (error) {
@@ -136,6 +140,8 @@ class Category {
 }
 
 // Automatically create the table upon model import (migration)
-Category.createTableIfNotExists();
+Category.createTableIfNotExists().catch(err => {
+    console.error('Failed to create categories table:', err);
+});
 
 export default Category;

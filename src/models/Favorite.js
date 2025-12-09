@@ -41,7 +41,7 @@ class Favorite {
     static async create(userId, categoryId) {
         try {
             const [result] = await pool.execute(
-                'INSERT INTO favorites (user_id, category_id, created_at) VALUES (?, ?, NOW())',
+                'INSERT INTO favorites (user_id, category_id, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)',
                 [userId, categoryId]
             );
             return result.insertId;
@@ -128,13 +128,11 @@ class Favorite {
         try {
             const createTableQuery = `
                 CREATE TABLE IF NOT EXISTS favorites (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    user_id INT NOT NULL,
-                    category_id INT NOT NULL,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    category_id INTEGER NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
-                    UNIQUE KEY unique_user_category_favorite (user_id, category_id)
+                    UNIQUE(user_id, category_id)
                 )
             `;
             await pool.execute(createTableQuery);
@@ -147,6 +145,8 @@ class Favorite {
 }
 
 // Automatically create the table upon model import
-Favorite.createTableIfNotExists();
+Favorite.createTableIfNotExists().catch(err => {
+    console.error('Failed to create favorites table:', err);
+});
 
 export default Favorite;

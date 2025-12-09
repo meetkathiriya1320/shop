@@ -21,7 +21,7 @@ class Order {
     static async create(userId, totalAmount, paymentMethod, shippingAddressStreet, shippingAddressCity, shippingAddressState, shippingAddressZip, shippingAddressCountry) {
         try {
             const [result] = await pool.execute(
-                'INSERT INTO orders (user_id, total_amount, payment_method, shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip, shipping_address_country, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
+                'INSERT INTO orders (user_id, total_amount, payment_method, shipping_address_street, shipping_address_city, shipping_address_state, shipping_address_zip, shipping_address_country, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
                 [userId, totalAmount, paymentMethod, shippingAddressStreet, shippingAddressCity, shippingAddressState, shippingAddressZip, shippingAddressCountry]
             );
             return result.insertId;
@@ -58,7 +58,7 @@ class Order {
     // Static method to update order status
     static async updateStatus(id, status) {
         try {
-            await pool.execute('UPDATE orders SET status = ?, updated_at = NOW() WHERE id = ?', [status, id]);
+            await pool.execute('UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [status, id]);
         } catch (error) {
             console.error('Error updating order status:', error);
             throw error;
@@ -68,7 +68,7 @@ class Order {
     // Static method to update payment status
     static async updatePaymentStatus(id, paymentStatus) {
         try {
-            await pool.execute('UPDATE orders SET payment_status = ?, updated_at = NOW() WHERE id = ?', [paymentStatus, id]);
+            await pool.execute('UPDATE orders SET payment_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [paymentStatus, id]);
         } catch (error) {
             console.error('Error updating payment status:', error);
             throw error;
@@ -80,9 +80,9 @@ class Order {
         try {
             const createTableQuery = `
                 CREATE TABLE IF NOT EXISTS orders (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    user_id INT NOT NULL,
-                    total_amount DECIMAL(10,2) NOT NULL,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    total_amount REAL NOT NULL,
                     status VARCHAR(50) DEFAULT 'pending',
                     payment_method VARCHAR(50),
                     payment_status VARCHAR(50) DEFAULT 'pending',
@@ -92,8 +92,7 @@ class Order {
                     shipping_address_zip VARCHAR(20),
                     shipping_address_country VARCHAR(100),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             `;
             await pool.execute(createTableQuery);
@@ -106,6 +105,8 @@ class Order {
 }
 
 // Automatically create the table upon model import
-Order.createTableIfNotExists();
+Order.createTableIfNotExists().catch(err => {
+    console.error('Failed to create orders table:', err);
+});
 
 export default Order;

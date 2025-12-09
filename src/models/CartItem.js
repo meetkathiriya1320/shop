@@ -55,14 +55,14 @@ class CartItem {
                 // Update quantity
                 const newQuantity = existingItem.quantity + quantity;
                 await pool.execute(
-                    'UPDATE cart_items SET quantity = ?, updated_at = NOW() WHERE id = ?',
+                    'UPDATE cart_items SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
                     [newQuantity, existingItem.id]
                 );
                 return existingItem.id;
             } else {
                 // Insert new item
                 const [result] = await pool.execute(
-                    'INSERT INTO cart_items (user_id, category_id, quantity, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())',
+                    'INSERT INTO cart_items (user_id, category_id, quantity, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
                     [userId, categoryId, quantity]
                 );
                 return result.insertId;
@@ -82,7 +82,7 @@ class CartItem {
             }
 
             const [result] = await pool.execute(
-                'UPDATE cart_items SET quantity = ?, updated_at = NOW() WHERE id = ?',
+                'UPDATE cart_items SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
                 [quantity, id]
             );
             return result.affectedRows > 0;
@@ -101,7 +101,7 @@ class CartItem {
             }
 
             const [result] = await pool.execute(
-                'UPDATE cart_items SET quantity = ?, updated_at = NOW() WHERE user_id = ? AND category_id = ?',
+                'UPDATE cart_items SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ? AND category_id = ?',
                 [quantity, userId, categoryId]
             );
             return result.affectedRows > 0;
@@ -241,15 +241,13 @@ class CartItem {
         try {
             const createTableQuery = `
                 CREATE TABLE IF NOT EXISTS cart_items (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    user_id INT NOT NULL,
-                    category_id INT NOT NULL,
-                    quantity INT NOT NULL DEFAULT 1,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    category_id INTEGER NOT NULL,
+                    quantity INTEGER NOT NULL DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
-                    UNIQUE KEY unique_user_category_cart (user_id, category_id)
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(user_id, category_id)
                 )
             `;
             await pool.execute(createTableQuery);
@@ -262,6 +260,8 @@ class CartItem {
 }
 
 // Automatically create the table upon model import
-CartItem.createTableIfNotExists();
+CartItem.createTableIfNotExists().catch(err => {
+    console.error('Failed to create cart items table:', err);
+});
 
 export default CartItem;
