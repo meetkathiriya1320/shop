@@ -23,9 +23,7 @@ app.use(cors({
   credentials: true
 }));
 
-// Handle preflight requests for all routes
-app.options('/*', cors());
-
+// CORS middleware is already configured above to handle preflight requests
 app.use(express.json());
 
 // Serve static files from public folder
