@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: shop-be
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: USE_SQLITE
+        value: "true"
+      - key: JWT_SECRET
+        value: "572f56cad4c2e436c3fa9f685aa68572"
+      - key: PORT
+        value: "10000"

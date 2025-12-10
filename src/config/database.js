@@ -12,7 +12,7 @@ let pool;
 
 // Create SQLite database wrapper
 class SQLitePool {
-  constructor(dbPath = './database.sqlite') {
+  constructor(dbPath = process.env.DATABASE_PATH || './database.sqlite') {
     this.dbPath = dbPath;
     this.db = null;
     this.connected = false;
